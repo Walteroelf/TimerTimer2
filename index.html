@@ -3,72 +3,72 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
-  <title>Arbeitszeit & Auszeit – Timer</title>
+  <title>Arbeitszeit & Auszeit</title>
   <style>
     :root{
       color-scheme: light dark;
       --bg:#f6f7fb; --fg:#0f172a; --card:#fff; --muted:#64748b;
       --accent:#2563eb; --danger:#ef4444; --ok:#16a34a; --track:#e5e7eb; --marker:#0b1221;
+      --wash:#cbd5e1; /* Ausgrauen (hell) */
       --shadow:0 6px 18px rgba(0,0,0,.08);
-      --workp:60%; --breakp:40%; --elapsedp:0%;
+      --workp:60%; --breakp:40%; --elapsedp:0%; --elapsedWorkp:0%;
     }
     @media (prefers-color-scheme: dark){
-      :root{ --bg:#0b1221; --fg:#e5e7eb; --card:#0f172a; --track:#1f2937; --marker:#e5e7eb; --shadow:none; }
+      :root{ --bg:#0b1221; --fg:#e5e7eb; --card:#0f172a; --track:#1f2937; --marker:#e5e7eb; --wash:#334155; --shadow:none; }
     }
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
     body{
-      margin:0; padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+      margin:0; padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom);
       font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       background:var(--bg); color:var(--fg);
       display:flex; align-items:center; justify-content:center;
       -webkit-tap-highlight-color: transparent;
     }
-    .wrap{ width:100%; max-width:860px; display:grid; gap:16px; }
+    .wrap{ width:100%; max-width:720px; display:grid; gap:12px; }
     header{ display:flex; align-items:center; justify-content:space-between; }
-    header h1{ margin:0; font-size:1.1rem; font-weight:800; letter-spacing:.01em; }
-    .card{ background:var(--card); border-radius:16px; padding:16px; box-shadow:var(--shadow); }
-    .grid{ display:grid; gap:14px; grid-template-columns:1fr 1fr; }
-    .group-label{ font-size:.95rem; color:var(--muted); margin-bottom:6px; }
-    .stepper{
-      display:grid; grid-template-columns:84px 1fr 84px; gap:10px; align-items:center;
-    }
+    header h1{ margin:0; font-size:1rem; font-weight:800; letter-spacing:.01em; }
+    .card{ background:var(--card); border-radius:14px; padding:12px; box-shadow:var(--shadow); }
+    .grid{ display:grid; gap:10px; grid-template-columns:1fr 1fr; }
+    @media (max-width: 760px){ .grid{ grid-template-columns:1fr 1fr; } } /* bleibt 2-spaltig auf iPad */
+    .group-label{ font-size:.9rem; color:var(--muted); margin-bottom:6px; }
+    .stepper{ display:grid; grid-template-columns:72px 1fr 72px; gap:8px; align-items:center; }
     .num{
-      text-align:center; font-size:2.2rem; font-weight:800; padding:12px;
-      border-radius:14px; border:1px solid #cbd5e1; background:transparent; color:inherit;
+      text-align:center; font-size:1.8rem; font-weight:800; padding:10px;
+      border-radius:12px; border:1px solid #cbd5e1; background:transparent; color:inherit;
       -moz-appearance:textfield;
     }
     .num::-webkit-outer-spin-button,.num::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
     .btn{
       display:inline-flex; align-items:center; justify-content:center;
-      min-width:84px; height:72px; border:none; border-radius:14px; font-size:2rem; font-weight:900;
+      min-width:72px; height:60px; border:none; border-radius:12px; font-size:1.8rem; font-weight:900;
       background:#eef2ff; color:#1f2937; cursor:pointer; touch-action:manipulation; user-select:none;
     }
     .btn:active{ transform:scale(.98); }
-    .btn.primary{ background:var(--accent); color:white; }
-    .btn.danger{ background:var(--danger); color:white; }
-    .btn.ghost{ background:transparent; border:1px solid #cbd5e1; color:inherit; }
-    .toolbar{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
-    .display{ text-align:center; padding:8px 16px; display:grid; gap:12px; }
-    .phase{ font-weight:800; letter-spacing:.02em; }
-    .time{ font-variant-numeric:tabular-nums; font-size: clamp(3.2rem, 10vw, 6.5rem); font-weight:900; line-height:1.05; }
+    .display{ text-align:center; padding:8px 12px; display:grid; gap:10px; }
+    .phase{ font-weight:800; letter-spacing:.02em; font-size:.95rem; }
+    .time{ font-variant-numeric:tabular-nums; font-size: clamp(2.6rem, 8vw, 4.8rem); font-weight:900; line-height:1.05; }
     .time.work{ color:#dc2626; }
     .time.break{ color:#16a34a; }
     .timeline{
-      position:relative; height:36px; border-radius:999px; background:var(--track); overflow:hidden;
+      position:relative; height:28px; border-radius:999px; background:var(--track); overflow:hidden;
     }
-    .seg-work,.seg-break,.marker{ position:absolute; top:0; bottom:0; }
-    .seg-work{ left:0; width:var(--workp); background:rgba(239,68,68,.9); }
-    .seg-break{ right:0; width:var(--breakp); background:rgba(22,163,74,.9); }
-    .marker{ left:var(--elapsedp); width:3px; background:var(--marker); }
-    .mini{ color:var(--muted); font-variant-numeric:tabular-nums; font-size:1rem; }
-    .row{ display:flex; justify-content:space-between; align-items:center; }
+    .seg-work,.seg-break{ position:absolute; top:0; bottom:0; }
+    .seg-work{ left:0; width:var(--workp); background:rgba(239,68,68,.95); }
+    .seg-break{ right:0; width:var(--breakp); background:rgba(22,163,74,.95); }
+    .wash{
+      position:absolute; left:0; top:0; bottom:0; width:var(--elapsedWorkp);
+      background:var(--wash);
+      opacity:0.85; /* „ausgrauen“ */
+    }
+    .chips{ display:flex; gap:8px; justify-content:space-between; flex-wrap:wrap; }
     .chip{
-      display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px;
-      border:1px solid #cbd5e1; font-weight:700; font-variant-numeric:tabular-nums;
+      display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+      border:1px solid #cbd5e1; font-weight:700; font-variant-numeric:tabular-nums; font-size:.95rem;
     }
+    .toolbar{ display:flex; gap:10px; justify-content:center; }
     .icon-btn{
-      width:72px; height:72px; border-radius:16px; font-size:2rem; display:inline-flex;
+      width:64px; height:64px; border-radius:14px; font-size:1.8rem; display:inline-flex;
       align-items:center; justify-content:center; border:none; cursor:pointer; touch-action:manipulation;
     }
     .icon-btn.primary{ background:var(--accent); color:#fff; }
@@ -88,24 +88,24 @@
         <div>
           <div class="group-label">Σ Gesamt (Min)</div>
           <div class="stepper">
-            <button id="totalMinus" class="btn" aria-label="Gesamtzeit minus 1">−</button>
+            <button id="totalMinus" class="btn" aria-label="Gesamtzeit −1">−</button>
             <input id="total" class="num" type="number" min="1" step="1" value="45" inputmode="numeric" />
-            <button id="totalPlus" class="btn" aria-label="Gesamtzeit plus 1">+</button>
+            <button id="totalPlus" class="btn" aria-label="Gesamtzeit +1">+</button>
           </div>
         </div>
         <div>
-          <div class="group-label">☕ Auszeit (Min)</div>
+          <div class="group-label">📱 Auszeit (Min)</div>
           <div class="stepper">
-            <button id="breakMinus" class="btn" aria-label="Auszeit minus 1">−</button>
+            <button id="breakMinus" class="btn" aria-label="Auszeit −1">−</button>
             <input id="break" class="num" type="number" min="0" step="1" value="10" inputmode="numeric" />
-            <button id="breakPlus" class="btn" aria-label="Auszeit plus 1">+</button>
+            <button id="breakPlus" class="btn" aria-label="Auszeit +1">+</button>
           </div>
         </div>
       </div>
-      <div class="row" style="margin-top:10px;">
-        <div class="chip" title="Arbeitszeit"><span>🟥 A</span> <span id="workChip">35:00</span></div>
-        <div class="chip" title="Auszeit"><span>🟩 B</span> <span id="breakChip">10:00</span></div>
-        <div class="chip" title="Gesamt"><span>Σ</span> <span id="totalChip">45:00</span></div>
+      <div class="chips" style="margin-top:8px;">
+        <div class="chip" title="Arbeitszeit">🟥 <span id="workChip">35:00</span></div>
+        <div class="chip" title="Auszeit">📱 <span id="breakChip">10:00</span></div>
+        <div class="chip" title="Gesamt">Σ <span id="totalChip">45:00</span></div>
       </div>
     </div>
 
@@ -113,11 +113,10 @@
       <div id="phaseLabel" class="phase">Arbeitszeit</div>
       <div id="phaseTime" class="time work">35:00</div>
       <div class="timeline" aria-label="Zeitbalken">
-        <div class="seg-work"></div>
+        <div class="seg-work"><div class="wash"></div></div>
         <div class="seg-break"></div>
-        <div class="marker"></div>
       </div>
-      <div class="toolbar" style="margin-top:8px;">
+      <div class="toolbar">
         <button id="startPauseBtn" class="icon-btn primary" aria-label="Start/Pause">▶</button>
         <button id="resetBtn" class="icon-btn danger" aria-label="Reset">⟲</button>
       </div>
@@ -145,18 +144,13 @@
     const resetBtn = $('resetBtn');
     const soundBtn = $('soundBtn');
 
-    // Bar parts
-    const segWork = document.querySelector('.seg-work');
-    const segBreak = document.querySelector('.seg-break');
-    const marker = document.querySelector('.marker');
-
     // Persisted settings
     let soundOn = true;
     try{
-      const saved = JSON.parse(localStorage.getItem('coupledTimerSettingsV2')||'{}');
+      const saved = JSON.parse(localStorage.getItem('coupledTimerSettingsV3')||'{}');
       if(Number.isFinite(saved.totalMin)) totalInput.value = saved.totalMin;
       if(Number.isFinite(saved.breakMin)) breakInput.value = saved.breakMin;
-      if(typeof saved.soundOn === 'boolean'){ soundOn = saved.soundOn; }
+      if(typeof saved.soundOn === 'boolean') soundOn = saved.soundOn;
     }catch{}
     updateSoundIcon();
 
@@ -172,12 +166,12 @@
     // Audio
     let audioCtx=null;
     function ensureAudio(){ if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch{} } }
-    function beep(ms=200, freq=720){
+    function beep(ms=180, freq=700){
       if(!soundOn || !audioCtx) return;
       const o=audioCtx.createOscillator(), g=audioCtx.createGain();
       o.type='sine'; o.frequency.value=freq;
       g.gain.setValueAtTime(0.0001,audioCtx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.25,audioCtx.currentTime+0.02);
+      g.gain.exponentialRampToValueAtTime(0.22,audioCtx.currentTime+0.02);
       g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+ms/1000);
       o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+ms/1000+0.02);
     }
@@ -187,7 +181,7 @@
     const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
     function fmt(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60),sec=s%60; return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;}
     function save(){
-      localStorage.setItem('coupledTimerSettingsV2', JSON.stringify({
+      localStorage.setItem('coupledTimerSettingsV3', JSON.stringify({
         totalMin: Math.floor(state.totalSec/60),
         breakMin: Math.floor(state.breakSec/60),
         soundOn
@@ -209,29 +203,25 @@
     }
 
     // Recalc from inputs
-    function recalc(from){
+    function recalc(){
       const beforeStarted = !state.started;
       let totalMin = parseInt(totalInput.value,10)||1;
       totalMin = clamp(totalMin,1,24*60);
       if(beforeStarted){ state.totalSec = totalMin*60; totalInput.value = totalMin; }
       let breakMin = parseInt(breakInput.value,10)||0;
-      if(state.started){ // clamp Auszeit an Gesamt (fix)
-        breakMin = clamp(breakMin, 0, Math.floor(state.totalSec/60));
-      }else{
-        breakMin = clamp(breakMin, 0, totalMin);
-      }
+      const limit = beforeStarted ? totalMin : Math.floor(state.totalSec/60);
+      breakMin = clamp(breakMin, 0, limit);
       breakInput.value = breakMin;
 
       state.breakSec = breakMin*60;
       state.workSec = clamp(state.totalSec - state.breakSec, 0, state.totalSec);
 
-      // UI
       workChip.textContent = fmt(state.workSec);
       breakChip.textContent = fmt(state.breakSec);
       totalChip.textContent = fmt(state.totalSec);
 
-      // If phase flips due to change, beep softly
-      const phase = getPhase(currentElapsed());
+      const elapsed = currentElapsed();
+      const phase = getPhase(elapsed);
       if(phase !== state.lastPhase){
         beep(150, phase==='break' ? 600 : 700);
         state.lastPhase = phase;
@@ -245,29 +235,28 @@
     function updateUI(skipBeep=false){
       const elapsed = currentElapsed();
       const phase = getPhase(elapsed);
-      const remainTotal = clamp(state.totalSec - elapsed, 0, state.totalSec);
 
       let remainPhase = 0;
       if(phase==='work'){ phaseLabel.textContent='Arbeitszeit'; phaseTime.className='time work'; remainPhase = state.workSec - elapsed; }
       else if(phase==='break'){ phaseLabel.textContent='Auszeit'; phaseTime.className='time break'; remainPhase = state.totalSec - elapsed; }
       else { phaseLabel.textContent='Fertig'; phaseTime.className='time'; remainPhase=0; }
-
       phaseTime.textContent = fmt(remainPhase);
 
-      // Bar segments and marker
+      // Bar segments and "ausgrauen"
       const workp = state.totalSec ? (state.workSec/state.totalSec)*100 : 0;
       const breakp = 100 - workp;
       const elapsedp = state.totalSec ? (elapsed/state.totalSec)*100 : 0;
+      const elapsedWorkp = Math.min(elapsedp, workp);
       document.documentElement.style.setProperty('--workp', `${workp}%`);
       document.documentElement.style.setProperty('--breakp', `${breakp}%`);
       document.documentElement.style.setProperty('--elapsedp', `${elapsedp}%`);
+      document.documentElement.style.setProperty('--elapsedWorkp', `${elapsedWorkp}%`);
 
-      // Controls state
-      startPauseBtn.textContent = state.running ? '⏸' : (state.started ? '▶' : '▶');
+      // Controls
+      startPauseBtn.textContent = state.running ? '⏸' : '▶';
       // Gesamtzeit nur vor Start veränderbar
-      totalInput.disabled = state.started;
-      totalMinus.disabled = state.started;
-      totalPlus.disabled = state.started;
+      const locked = state.started;
+      totalInput.disabled = locked; totalMinus.disabled = locked; totalPlus.disabled = locked;
     }
 
     // Start/Pause/Reset
@@ -304,7 +293,7 @@
       state.started=false; state.running=false;
       state.t0=0; state.pausedAcc=0; state.pauseStart=0;
       if(ticker) clearInterval(ticker); ticker=null;
-      recalc('reset');
+      recalc();
       updateUI(true);
     }
     function tick(){
@@ -330,9 +319,7 @@
       const startHold = (e)=>{
         e.preventDefault();
         stepFn();
-        holdTimer = setTimeout(()=>{
-          repeatTimer = setInterval(stepFn, 120);
-        }, 400);
+        holdTimer = setTimeout(()=>{ repeatTimer = setInterval(stepFn, 120); }, 400);
       };
       const endHold = ()=>{
         clearTimeout(holdTimer); clearInterval(repeatTimer);
@@ -344,38 +331,33 @@
       window.addEventListener('blur', endHold);
     }
 
-    // Step functions
+    // Steps
     function stepTotal(delta){
-      if(state.started) return; // gesperrt nach Start
+      if(state.started) return;
       const v = clamp((parseInt(totalInput.value,10)||1)+delta, 1, 24*60);
-      totalInput.value = v; recalc('total');
+      totalInput.value = v; recalc();
     }
     function stepBreak(delta){
       const limit = state.started ? Math.floor(state.totalSec/60) : (parseInt(totalInput.value,10)||1);
       const v = clamp((parseInt(breakInput.value,10)||0)+delta, 0, limit);
-      breakInput.value = v; recalc('break');
+      breakInput.value = v; recalc();
     }
 
     // Wiring
     startPauseBtn.addEventListener('click', ()=> state.running ? pause() : start());
     resetBtn.addEventListener('click', reset);
+    totalInput.addEventListener('input', ()=>{ if(!state.started) recalc(); });
+    breakInput.addEventListener('input', ()=>{ recalc(); });
+    soundBtn.addEventListener('click', ()=>{ ensureAudio(); soundOn = !soundOn; updateSoundIcon(); save(); });
 
-    totalInput.addEventListener('input', ()=>{ if(!state.started) recalc('total'); });
-    breakInput.addEventListener('input', ()=>{ recalc('break'); });
-
-    soundBtn.addEventListener('click', ()=>{
-      ensureAudio();
-      soundOn = !soundOn; updateSoundIcon(); save();
-    });
-
-    // Repeaters and single taps
+    // Repeaters + taps
     addRepeater(totalMinus, ()=>stepTotal(-1));
     addRepeater(totalPlus,  ()=>stepTotal(+1));
     addRepeater(breakMinus, ()=>stepBreak(-1));
     addRepeater(breakPlus,  ()=>stepBreak(+1));
 
     // Init
-    recalc('init'); updateUI(true);
+    recalc(); updateUI(true);
   </script>
 </body>
 </html>
