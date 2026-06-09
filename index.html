@@ -9,6 +9,7 @@
       color-scheme: light dark;
       --bg:#f6f7fb; --fg:#0f172a; --card:#fff; --muted:#64748b;
       --accent:#2563eb; --danger:#ef4444; --ok:#16a34a; --track:#e5e7eb; --marker:#0b1221;
+      --divider:#facc15; /* gelbe Trennlinie */
       --wash:#cbd5e1; /* Ausgrauen (hell) */
       --shadow:0 6px 18px rgba(0,0,0,.08);
       --workp:60%; --breakp:40%; --elapsedp:0%; --elapsedWorkp:0%;
@@ -19,18 +20,18 @@
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
     body{
-      margin:0; padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom);
+      margin:0;
+      padding: env(safe-area-inset-top) 6px env(safe-area-inset-bottom); /* schmale Seitenränder */
       font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       background:var(--bg); color:var(--fg);
       display:flex; align-items:center; justify-content:center;
       -webkit-tap-highlight-color: transparent;
     }
-    .wrap{ width:100%; max-width:720px; display:grid; gap:12px; }
+    .wrap{ width:100%; max-width:100%; display:grid; gap:12px; } /* volle Breite */
     header{ display:flex; align-items:center; justify-content:space-between; }
     header h1{ margin:0; font-size:1rem; font-weight:800; letter-spacing:.01em; }
     .card{ background:var(--card); border-radius:14px; padding:12px; box-shadow:var(--shadow); }
     .grid{ display:grid; gap:10px; grid-template-columns:1fr 1fr; }
-    @media (max-width: 760px){ .grid{ grid-template-columns:1fr 1fr; } } /* bleibt 2-spaltig auf iPad */
     .group-label{ font-size:.9rem; color:var(--muted); margin-bottom:6px; }
     .stepper{ display:grid; grid-template-columns:72px 1fr 72px; gap:8px; align-items:center; }
     .num{
@@ -53,13 +54,16 @@
     .timeline{
       position:relative; height:28px; border-radius:999px; background:var(--track); overflow:hidden;
     }
-    .seg-work,.seg-break{ position:absolute; top:0; bottom:0; }
+    .seg-work,.seg-break{ position:absolute; top:0; bottom:0; z-index:1; }
     .seg-work{ left:0; width:var(--workp); background:rgba(239,68,68,.95); }
     .seg-break{ right:0; width:var(--breakp); background:rgba(22,163,74,.95); }
     .wash{
       position:absolute; left:0; top:0; bottom:0; width:var(--elapsedWorkp);
-      background:var(--wash);
-      opacity:0.85; /* „ausgrauen“ */
+      background:var(--wash); opacity:0.85; z-index:2; /* „ausgrauen“ */
+    }
+    .divider{
+      position:absolute; top:0; bottom:0; left:var(--workp); width:2px; background:var(--divider);
+      z-index:3; pointer-events:none;
     }
     .chips{ display:flex; gap:8px; justify-content:space-between; flex-wrap:wrap; }
     .chip{
@@ -115,6 +119,7 @@
       <div class="timeline" aria-label="Zeitbalken">
         <div class="seg-work"><div class="wash"></div></div>
         <div class="seg-break"></div>
+        <div class="divider" title="Trennlinie"></div>
       </div>
       <div class="toolbar">
         <button id="startPauseBtn" class="icon-btn primary" aria-label="Start/Pause">▶</button>
@@ -147,7 +152,7 @@
     // Persisted settings
     let soundOn = true;
     try{
-      const saved = JSON.parse(localStorage.getItem('coupledTimerSettingsV3')||'{}');
+      const saved = JSON.parse(localStorage.getItem('coupledTimerSettingsV4')||'{}');
       if(Number.isFinite(saved.totalMin)) totalInput.value = saved.totalMin;
       if(Number.isFinite(saved.breakMin)) breakInput.value = saved.breakMin;
       if(typeof saved.soundOn === 'boolean') soundOn = saved.soundOn;
@@ -181,7 +186,7 @@
     const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
     function fmt(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60),sec=s%60; return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;}
     function save(){
-      localStorage.setItem('coupledTimerSettingsV3', JSON.stringify({
+      localStorage.setItem('coupledTimerSettingsV4', JSON.stringify({
         totalMin: Math.floor(state.totalSec/60),
         breakMin: Math.floor(state.breakSec/60),
         soundOn
@@ -242,7 +247,7 @@
       else { phaseLabel.textContent='Fertig'; phaseTime.className='time'; remainPhase=0; }
       phaseTime.textContent = fmt(remainPhase);
 
-      // Bar segments and "ausgrauen"
+      // Balken und Ausgrauen
       const workp = state.totalSec ? (state.workSec/state.totalSec)*100 : 0;
       const breakp = 100 - workp;
       const elapsedp = state.totalSec ? (elapsed/state.totalSec)*100 : 0;
@@ -254,7 +259,6 @@
 
       // Controls
       startPauseBtn.textContent = state.running ? '⏸' : '▶';
-      // Gesamtzeit nur vor Start veränderbar
       const locked = state.started;
       totalInput.disabled = locked; totalMinus.disabled = locked; totalPlus.disabled = locked;
     }
