@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Arbeitszeit & Auszeit – gekoppelte Timer</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f7fb; --fg: #111; --card: #fff;
+      --accent: #2563eb; --accent2: #16a34a; --danger: #dc2626; --muted: #6b7280;
+      --shadow: 0 6px 18px rgba(0,0,0,.08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0f172a; --fg: #e5e7eb; --card: #0b1221; --shadow: none; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg); color: var(--fg);
+      display: flex; min-height: 100vh; align-items: center; justify-content: center;
+    }
+    .wrap { width: 100%; max-width: 760px; display: grid; gap: 16px; }
+    header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    header h1 { font-size: 1.25rem; margin: 0; }
+    .card { background: var(--card); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
+    .grid { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+    label { font-size: .95rem; color: var(--muted); display: block; margin-bottom: 6px; }
+    input[type="number"] {
+      width: 100%; font-size: 1.1rem; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid #ccc; background: transparent; color: inherit;
+    }
+    .derived { font-size: 1.1rem; font-weight: 600; }
+    .display { text-align: center; padding: 12px 16px; display: grid; gap: 8px; }
+    .phase { font-weight: 700; letter-spacing: .04em; }
+    .time { font-variant-numeric: tabular-nums; font-size: clamp(3rem, 10vw, 6rem); font-weight: 800; line-height: 1.05; }
+    .subtimes { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; color: var(--muted); }
+    .bar { height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+    .bar > div { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .3s ease; }
+    .buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    button { padding: 12px 16px; border-radius: 12px; border: none; color: white; font-weight: 700; cursor: pointer; background: var(--accent); }
+    button.secondary { background: #64748b; }
+    button.danger { background: var(--danger); }
+    .note { color: var(--muted); font-size: .9rem; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .toggle { display: inline-flex; align-items: center; gap: 8px; }
+    .small { font-size: .9rem; }
+    footer { text-align: center; color: var(--muted); font-size: .85rem; padding: 6px 0 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Arbeitszeit & Auszeit – gekoppelte Timer</h1>
+      <div class="row small">
+        <label class="toggle"><input id="lockToggle" type="checkbox" checked> Gesamtzeit fixieren</label>
+        <label class="toggle"><input id="soundToggle" type="checkbox" checked> Signalton</label>
+        <label class="toggle"><input id="autoToggle" type="checkbox" checked> Automatisch weiter</label>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="grid">
+        <div>
+          <label for="work">Arbeitszeit (Minuten)</label>
+          <input id="work" type="number" min="0" step="1" value="35">
+        </div>
+        <div>
+          <label for="break">Auszeit (Minuten)</label>
+          <input id="break" type="number" min="0" step="1" value="10">
+        </div>
+      </div>
+      <div class="row" style="justify-content: space-between; margin-top: 8px;">
+        <div class="derived">Gesamtzeit: <span id="totalLabel">45</span> Min</div>
+        <div class="note">Änderungen wirken sofort – auch während der Timer läuft.</div>
+      </div>
+    </div>
+
+    <div class="card display">
+      <div class="phase" id="phaseLabel">Arbeitszeit läuft</div>
+      <div class="time" id="mainTime">35:00</div>
+      <div class="bar"><div id="progress"></div></div>
+      <div class="subtimes">
+        <div>Arbeitszeit: <strong id="workInfo">35:00</strong></div>
+        <div>Auszeit: <strong id="breakInfo">10:00</strong></div>
+        <div>Gesamt: <strong id="totalInfo">45:00</strong></div>
+      </div>
+      <div class="buttons">
+        <button id="startPauseBtn">Start</button>
+        <button class="secondary" id="skipBtn">Wechseln</button>
+        <button class="danger" id="resetBtn">Reset</button>
+      </div>
+      <div class="note">Tipp: In Safari über „Teilen → Zum Home‑Bildschirm“ wie eine App speichern.</div>
+    </div>
+
+    <footer>Keine Datenübertragung. Einstellungen bleiben lokal im Browser.</footer>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const workInput = $('work');
+    const breakInput = $('break');
+    const totalLabel = $('totalLabel');
+
+    const workInfo = $('workInfo');
+    const breakInfo = $('breakInfo');
+    const totalInfo = $('totalInfo');
+    const phaseLabel = $('phaseLabel');
+    const mainTime = $('mainTime');
+    const progress = $('progress');
+    const startPauseBtn = $('startPauseBtn');
+    const resetBtn = $('resetBtn');
+    const skipBtn = $('skipBtn');
+    const soundToggle = $('soundToggle');
+    const autoToggle = $('autoToggle');
+    const lockToggle = $('lockToggle');
+
+    // Load saved settings
+    try {
+      const saved = JSON.parse(localStorage.getItem('dualTimerWB') || '{}');
+      if (Number.isFinite(saved.workMin)) workInput.value = saved.workMin;
+      if (Number.isFinite(saved.breakMin)) breakInput.value = saved.breakMin;
+      if (typeof saved.locked === 'boolean') lockToggle.checked = saved.locked;
+      if (typeof saved.sound === 'boolean') soundToggle.checked = saved.sound;
+      if (typeof saved.auto === 'boolean') autoToggle.checked = saved.auto;
+    } catch {}
+
+    const state = {
+      workSec: 35*60,
+      breakSec: 10*60,
+      totalSec: 45*60,
+      locked: true,
+      phase: 'work', // 'work' | 'break'
+      running: false,
+      started: false,
+      remaining: 0,
+      interval: null,
+      phaseDuration: 0
+    };
+
+    // Audio (simple beep)
+    let audioCtx = null;
+    function ensureAudio() {
+      if (!audioCtx) {
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch {}
+      }
+    }
+    function beep(ms=400, freq=880) {
+      if (!soundToggle.checked || !audioCtx) return;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.2, audioCtx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + ms/1000);
+      o.connect(g).connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + ms/1000 + 0.02);
+    }
+
+    function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+    function toSec(min) { return Math.max(0, Math.floor(min) * 60); }
+    function fmt(s) {
+      s = Math.max(0, Math.floor(s));
+      const m = Math.floor(s/60), sec = s % 60;
+      return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    }
+
+    function save() {
+      localStorage.setItem('dualTimerWB', JSON.stringify({
+        workMin: parseInt(workInput.value,10) || 0,
+        breakMin: parseInt(breakInput.value,10) || 0,
+        locked: lockToggle.checked,
+        sound: soundToggle.checked,
+        auto: autoToggle.checked
+      }));
+    }
+
+    function setDurations(workMin, breakMin, source='user') {
+      workMin = Math.max(0, Math.floor(workMin || 0));
+      breakMin = Math.max(0, Math.floor(breakMin || 0));
+
+      if (lockToggle.checked) {
+        // Gesamtzeit bleibt konstant
+        const totalMin = Math.max(1, Math.floor(state.totalSec/60));
+        if (source === 'work') {
+          workMin = clamp(workMin, 0, totalMin);
+          breakMin = totalMin - workMin;
+          breakInput.value = breakMin;
+        } else if (source === 'break') {
+          breakMin = clamp(breakMin, 0, totalMin);
+          workMin = totalMin - breakMin;
+          workInput.value = workMin;
+        } else { // external/total change
+          workMin = clamp(workMin, 0, totalMin);
+          breakMin = totalMin - workMin;
+          breakInput.value = breakMin;
+        }
+        totalLabel.textContent = String(totalMin);
+        state.totalSec = totalMin * 60;
+      } else {
+        // Gesamtzeit = Summe
+        const totalMin = workMin + breakMin;
+        state.totalSec = Math.max(1, totalMin) * 60;
+        totalLabel.textContent = String(totalMin);
+      }
+
+      const oldWorkSec = state.workSec;
+      const oldBreakSec = state.breakSec;
+
+      state.workSec = workMin * 60;
+      state.breakSec = breakMin * 60;
+
+      // Passen die laufenden Restzeiten dynamisch an (Progress bleibt erhalten)
+      const adjustPhase = (oldDur, newDur) => {
+        const elapsed = clamp(oldDur - state.remaining, 0, oldDur);
+        return clamp(newDur - elapsed, 0, newDur);
+      };
+
+      if (state.started) {
+        if (state.phase === 'work') {
+          state.remaining = adjustPhase(oldWorkSec, state.workSec);
+          state.phaseDuration = state.workSec;
+        } else {
+          state.phase = 'break'; // falls geändert
+          state.remaining = adjustPhase(oldBreakSec, state.breakSec);
+          state.phaseDuration = state.breakSec;
+        }
+        // Falls die neue Dauer kleiner als bereits vergangene Zeit ist → Phase sofort beenden
+        if (state.running && state.remaining <= 0) handlePhaseEnd();
+      } else {
+        // Noch nicht gestartet → mit Arbeitsphase beginnen
+        state.phase = 'work';
+        state.remaining = state.workSec;
+        state.phaseDuration = state.workSec;
+      }
+
+      updateStaticInfo();
+      updateUI();
+      save();
+    }
+
+    function updateStaticInfo() {
+      workInfo.textContent = fmt(state.workSec);
+      breakInfo.textContent = fmt(state.breakSec);
+      totalInfo.textContent = fmt(state.totalSec);
+      workInput.value = Math.floor(state.workSec/60);
+      breakInput.value = Math.floor(state.breakSec/60);
+      totalLabel.textContent = String(Math.floor(state.totalSec/60));
+    }
+
+    function updateUI() {
+      phaseLabel.textContent = state.phase === 'work' ? 'Arbeitszeit läuft' : 'Auszeit läuft';
+      mainTime.textContent = fmt(state.remaining);
+      const elapsed = state.phaseDuration ? clamp(state.phaseDuration - state.remaining, 0, state.phaseDuration) : 0;
+      const pct = state.phaseDuration ? (elapsed / state.phaseDuration) * 100 : 0;
+      progress.style.width = `${pct}%`;
+      startPauseBtn.textContent = state.running ? 'Pause' : (state.started ? 'Weiter' : 'Start');
+    }
+
+    function startTimer() {
+      if (state.running) return;
+      ensureAudio();
+      if (!state.started) {
+        state.phase = 'work';
+        state.remaining = state.workSec;
+        state.phaseDuration = state.workSec;
+      }
+      if (state.remaining <= 0) return;
+      state.running = true;
+      if (state.interval) clearInterval(state.interval);
+      state.interval = setInterval(tick, 200);
+      updateUI();
+    }
+
+    function pauseTimer() {
+      if (!state.running) return;
+      state.running = false;
+      clearInterval(state.interval); state.interval = null;
+      updateUI();
+    }
+
+    function resetTimer() {
+      state.running = false; state.started = false;
+      clearInterval(state.interval); state.interval = null;
+      // Zurück auf Eingaben
+      setDurations(parseInt(workInput.value,10)||0, parseInt(breakInput.value,10)||0, 'external');
+      updateUI();
+    }
+
+    function switchPhase(playTone=true) {
+      if (state.phase === 'work') {
+        if (state.breakSec > 0) {
+          state.phase = 'break';
+          state.remaining = state.breakSec;
+          state.phaseDuration = state.breakSec;
+          if (playTone) { beep(220, 660); setTimeout(()=>beep(220, 550), 120); }
+        } else {
+          if (playTone) beep(400, 880);
+          stopTimer();
+        }
+      } else {
+        if (playTone) beep(500, 520);
+        stopTimer();
+      }
+      updateUI();
+    }
+
+    function stopTimer() {
+      state.running = false;
+      clearInterval(state.interval); state.interval = null;
+    }
+
+    function handlePhaseEnd() {
+      state.remaining = 0;
+      updateUI();
+      if (autoToggle.checked) {
+        switchPhase(true);
+      } else {
+        stopTimer();
+        beep(450, 720);
+      }
+    }
+
+    function tick() {
+      if (!state.running) return;
+      state.remaining -= 0.2;
+      if (state.remaining <= 0) { handlePhaseEnd(); return; }
+      updateUI();
+    }
+
+    // Events
+    workInput.addEventListener('input', () => {
+      const w = parseInt(workInput.value,10) || 0;
+      const b = parseInt(breakInput.value,10) || 0;
+      setDurations(w, b, 'work');
+    });
+    breakInput.addEventListener('input', () => {
+      const w = parseInt(workInput.value,10) || 0;
+      const b = parseInt(breakInput.value,10) || 0;
+      setDurations(w, b, 'break');
+    });
+    lockToggle.addEventListener('change', () => {
+      if (lockToggle.checked) {
+        // Fixiere aktuelle Summe als Gesamtzeit
+        const w = parseInt(workInput.value,10) || 0;
+        const b = parseInt(breakInput.value,10) || 0;
+        state.totalSec = Math.max(1, w + b) * 60;
+      }
+      setDurations(parseInt(workInput.value,10)||0, parseInt(breakInput.value,10)||0, 'external');
+      save();
+    });
+    soundToggle.addEventListener('change', save);
+    autoToggle.addEventListener('change', save);
+
+    startPauseBtn.addEventListener('click', () => state.running ? pauseTimer() : startTimer());
+    resetBtn.addEventListener('click', resetTimer);
+    skipBtn.addEventListener('click', () => switchPhase(false));
+
+    // Init
+    state.locked = lockToggle.checked;
+    // initial calc
+    (function initFromInputs(){
+      const w = parseInt(workInput.value,10) || 0;
+      const b = parseInt(breakInput.value,10) || 0;
+      state.totalSec = (w + b) * 60;
+      setDurations(w, b, 'external');
+      state.phase = 'work';
+      state.remaining = state.workSec;
+      state.phaseDuration = state.workSec;
+      updateStaticInfo(); updateUI();
+    })();
+  </script>
+</body>
+</html>
